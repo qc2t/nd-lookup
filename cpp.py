@@ -26,28 +26,38 @@ def get_image_base64(path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
+# --- 函数：寻找可用中文字体 ---
+def get_font(size):
+    # 1. 优先尝试仓库中上传的 simhei.ttf
+    font_paths = [
+        "simhei.ttf", 
+        "simsun.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf", # Linux/Streamlit Cloud 常用路径
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    # 2. 如果都没找到，只能返回默认（中文会乱码）
+    st.warning("⚠️ 未检测到中文字体文件，请上传 simhei.ttf 到 GitHub 仓库以修复图片乱码。")
+    return ImageFont.load_default()
+
 # --- 函数：生成证书样式的图片 ---
 def create_styled_image(row, logo_path):
-    # 创建 800x800 的白底画布
     img = Image.new('RGB', (800, 850), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
     
-    # 尝试加载字体 (建议在仓库上传一个 simhei.ttf 保证中文不乱码)
-    try:
-        font_path = "simhei.ttf" if os.path.exists("simhei.ttf") else "DejaVuSans.ttf"
-        font_b = ImageFont.truetype(font_path, 28)
-        font_s = ImageFont.truetype(font_path, 24)
-    except:
-        font_b = ImageFont.load_default()
-        font_s = ImageFont.load_default()
+    # 加载字体
+    font_b = get_font(30)
+    font_s = get_font(24)
 
     # 绘制外边框
     draw.rectangle([30, 30, 770, 820], outline=(0, 0, 0), width=3)
     
-    # 填充表头数据
-    draw.text((60, 60), "ND CRANKSHAFT INSPECTION DATA", fill=(0, 0, 0), font=font_b)
+    # 标题
+    draw.text((60, 60), "ND CRANKSHAFT DATA REPORT", fill=(0, 0, 0), font=font_b)
     
-    # 绘制模拟表格线条和文字
+    # 绘制数据内容
     y = 150
     data = [
         ("名  称", row.get('名称', 'N/A')),
@@ -57,31 +67,27 @@ def create_styled_image(row, logo_path):
         ("制造单位", "CRRC ZJ"),
         ("检测方式", "UT  MT"),
         ("船检控制号", row.get('船检控制号', 'N/A')),
-        ("检验机构", "CCS (Authorized)"),
+        ("检验机构", "CCS"),
         ("船检时间", row.get('船检时间', 'N/A').strftime('%d-%m-%Y') if pd.notnull(row.get('船检时间')) else 'N/A')
     ]
 
     for label, value in data:
-        # 画横线
         draw.line([60, y + 45, 740, y + 45], fill=(200, 200, 200), width=1)
-        # 画标签
         draw.text((70, y), f"{label}:", fill=(100, 100, 100), font=font_s)
-        # 画数值
         draw.text((280, y), str(value), fill=(0, 0, 0), font=font_s)
         y += 70
 
-    # 合成右上角图标
+    # 合成 CCS 图标
     if os.path.exists(logo_path):
         logo = Image.open(logo_path).convert("RGBA")
         logo.thumbnail((120, 60))
         img.paste(logo, (620, 55), logo)
 
-    # 转换回字节流
     img_byte_arr = BytesIO()
     img.save(img_byte_arr, format='PNG')
     return img_byte_arr.getvalue()
 
-# --- 权限校验 (省略，使用之前的 check_password) ---
+# --- 密码保护 ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.text_input("请输入访问密码", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == st.secrets.get("my_password", "123456")}), key="password")
@@ -90,7 +96,7 @@ def check_password():
 
 # --- 主程序 ---
 if check_password():
-    st.title("🚢 ND曲轴证书查询系统")
+    st.title("🚢 ND曲轴查询 & 自动图片生成")
     
     @st.cache_data
     def load_data():
@@ -104,7 +110,7 @@ if check_password():
     img_b64 = get_image_base64("CCS.png")
 
     if df is not None:
-        search_id = st.text_input("请输入轴号搜索:")
+        search_id = st.text_input("🔍 请输入轴号查询:")
         if search_id:
             results = df[df['轴号'].astype(str).str.contains(search_id, case=False, na=False)]
             
@@ -128,11 +134,10 @@ if check_password():
                 """
                 st.markdown(table_html, unsafe_allow_html=True)
                 
-                # 2. 图片导出按钮
-                # 文件名自动设为: 轴号.png
+                # 2. 图片导出 (以轴号命名)
                 img_bytes = create_styled_image(row, "CCS.png")
                 st.download_button(
-                    label=f"💾 下载图片：{row['轴号']}.png",
+                    label=f"💾 点击下载证书图片：{row['轴号']}.png",
                     data=img_bytes,
                     file_name=f"{row['轴号']}.png",
                     mime="image/png"
