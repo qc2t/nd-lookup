@@ -5,57 +5,81 @@ from PIL import Image, ImageDraw, ImageFont
 import base64
 import os
 
-# --- 1. 页面基础配置 ---
-st.set_page_config(page_title="ND曲轴数据查询系统", layout="centered", page_icon="⚓")
+# --- 1. 页面配置 ---
+st.set_page_config(page_title="ND曲轴数据查询", layout="centered", page_icon="⚓")
 
-# 自定义 CSS：网页端的报表视图
+# CSS：专门针对手机端大幅调大字号
 st.markdown("""
     <style>
-    .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 2px solid #000; }
-    .report-table td { border: 1px solid #333; padding: 12px; font-size: 16px; line-height: 1.5; }
-    .label-col { background-color: #f2f2f2; font-weight: bold; width: 35%; text-align: left; }
-    .value-col { width: 65%; background-color: #ffffff; font-weight: 500; color: #000; }
-    .ccs-logo-img { height: 35px; vertical-align: middle; }
+    /* 整体表格样式 */
+    .report-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        margin-top: 15px; 
+        border: 3px solid #000; /* 加粗外边框 */
+    }
+    .report-table td { 
+        border: 1px solid #444; 
+        padding: 15px;      /* 增加内边距 */
+        font-size: 22px;    /* 手机端核心：大幅增加字号 */
+        line-height: 1.4;
+    }
+    /* 左侧标签列 */
+    .label-col { 
+        background-color: #f2f2f2; 
+        font-weight: bold; 
+        width: 40%;         /* 调整比例适配手机 */
+        color: #000;
+    }
+    /* 右侧内容列 */
+    .value-col { 
+        width: 60%; 
+        background-color: #ffffff; 
+        font-weight: 600;   /* 文字加粗 */
+        color: #000;
+    }
+    /* CCS 图标缩放 */
+    .ccs-logo-img { 
+        height: 45px;       /* 图标调大 */
+        vertical-align: middle; 
+    }
+    /* 调整 Streamlit 默认按钮样式，使其在手机上更好点 */
+    div.stDownloadButton > button {
+        width: 100% !important;
+        height: 60px !important;
+        font-size: 20px !important;
+        background-color: #007bff !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心功能函数 ---
+# --- 2. 核心函数 ---
 
 def get_image_base64(path):
-    """读取图片并转为 Base64，用于在网页 HTML 表格中显示"""
     if os.path.exists(path):
         with open(path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     return None
 
 def get_chinese_font(size):
-    """解决图片中文乱码"""
-    font_paths = [
-        "simhei.ttf", 
-        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf", 
-        "C:/Windows/Fonts/simhei.ttf",
-        "/System/Library/Fonts/STHeiti Light.ttc"
-    ]
-    for p in font_paths:
-        if os.path.exists(p):
-            return ImageFont.truetype(p, size)
+    """自动寻找中文字体，解决图片乱码"""
+    paths = ["simhei.ttf", "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf", "C:/Windows/Fonts/simhei.ttf"]
+    for p in paths:
+        if os.path.exists(p): return ImageFont.truetype(p, size)
     return ImageFont.load_default()
 
 def create_report_image(row, logo_path):
-    """生成证书图片：图标精准定位在“检验机构”行"""
-    width, height = 800, 950
+    """生成证书图片：图标精准定位在检验机构行"""
+    width, height = 800, 1000 # 增加高度
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    
-    font_title = get_chinese_font(32)
-    font_text = get_chinese_font(24)
+    font_b = get_chinese_font(36) # 图片字体也同步调大
+    font_s = get_chinese_font(28)
 
-    # 绘制外框
-    margin = 25
-    draw.rectangle([margin, margin, width - margin, height - margin], outline=(0, 0, 0), width=3)
-    draw.text((55, 60), "ND CRANKSHAFT INSPECTION RECORD", fill=(0, 0, 0), font=font_title)
+    draw.rectangle([25, 25, 775, 975], outline=(0, 0, 0), width=4)
+    draw.text((55, 60), "ND CRANKSHAFT INSPECTION RECORD", fill=(0, 0, 0), font=font_b)
 
-    # 准备数据项
     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
     items = [
         ("名  称", str(row.get('名称', 'N/A'))),
@@ -65,60 +89,41 @@ def create_report_image(row, logo_path):
         ("制造单位", "CRRC ZJ"),
         ("检测方式", "UT  MT"),
         ("船检控制号", str(row.get('船检控制号', 'N/A'))),
-        ("检验机构", "LOGO_PLACEHOLDER"), # 特殊标记，用于放图标
+        ("检验机构", "LOGO_MARK"), 
         ("船检时间", fmt_date)
     ]
 
-    y_start = 160
-    line_height = 80
-    
+    y = 160
     for label, value in items:
-        # 绘制行线
-        draw.line([55, y_start + 50, width - 55, y_start + 50], fill=(210, 210, 210), width=1)
-        # 绘制左侧标签
-        draw.text((70, y_start), f"{label}:", fill=(100, 100, 100), font=font_text)
-        
-        # 绘制右侧内容
-        if value == "LOGO_PLACEHOLDER":
-            # 如果是检验机构行，贴上图标
+        draw.line([55, y + 55, 745, y + 55], fill=(200, 200, 200), width=1)
+        draw.text((70, y), f"{label}:", fill=(100, 100, 100), font=font_s)
+        if value == "LOGO_MARK":
             if os.path.exists(logo_path):
                 logo = Image.open(logo_path).convert("RGBA")
-                # 缩放图标以适应行高
-                logo.thumbnail((120, 45))
-                # 计算垂直居中位置
-                logo_y = y_start - 5 
-                img.paste(logo, (280, logo_y), logo)
+                logo.thumbnail((150, 55))
+                img.paste(logo, (300, y - 5), logo)
             else:
-                draw.text((280, y_start), "CCS", fill=(0, 0, 0), font=font_text)
+                draw.text((300, y), "CCS", fill=(0, 0, 0), font=font_s)
         else:
-            # 普通文字内容
-            draw.text((280, y_start), value, fill=(0, 0, 0), font=font_text)
-            
-        y_start += line_height
+            draw.text((300, y), value, fill=(0, 0, 0), font=font_s)
+        y += 85 # 行间距拉大
 
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
 
-# --- 3. 密码验证逻辑 ---
-def check_password():
-    if "password_correct" not in st.session_state:
-        st.markdown("### 🔒 内部系统，请输入授权密码")
-        st.text_input("授权密码", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == st.secrets.get("my_password", "123456")}), key="password")
-        return False
-    return st.session_state["password_correct"]
-
-# --- 4. 主程序 ---
-if check_password():
-    st.title("🚢 ND曲轴证书查询系统")
-    st.markdown("---")
+# --- 3. 密码与主逻辑 ---
+if "password_correct" not in st.session_state:
+    st.markdown("## 🔒 授权查询系统")
+    st.text_input("请输入访问密码", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == st.secrets.get("my_password", "123456")}), key="password")
+else:
+    st.title("🚢 ND曲轴证书查询 (手机版)")
     
     @st.cache_data
     def load_data():
         try:
             df = pd.read_excel("ND曲轴.xlsx", sheet_name="CCS")
-            if '船检时间' in df.columns:
-                df['船检时间'] = pd.to_datetime(df['船检时间'], errors='coerce')
+            df['船检时间'] = pd.to_datetime(df['船检时间'], errors='coerce')
             return df
         except: return None
 
@@ -126,18 +131,15 @@ if check_password():
     logo_b64 = get_image_base64("CCS.png")
 
     if df is not None:
-        search_id = st.text_input("🔍 请输入轴号进行查询 (支持模糊搜索):")
-        
+        search_id = st.text_input("🔍 轴号搜索:", placeholder="输入轴号...")
         if search_id:
             res = df[df['轴号'].astype(str).str.contains(search_id, case=False, na=False)]
-            
             if not res.empty:
                 for index, row in res.iterrows():
                     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
-                    ccs_display = f'<img src="data:image/png;base64,{logo_b64}" class="ccs-logo-img">' if logo_b64 else "CCS"
+                    ccs_html = f'<img src="data:image/png;base64,{logo_b64}" class="ccs-logo-img">' if logo_b64 else "CCS"
                     
-                    # 4.1 网页端显视 (HTML 表格)
-                    html = f"""
+                    st.markdown(f"""
                     <table class="report-table">
                         <tr><td class="label-col">名称</td><td class="value-col">{row['名称']}</td></tr>
                         <tr><td class="label-col">轴号</td><td class="value-col">{row['轴号']}</td></tr>
@@ -146,20 +148,18 @@ if check_password():
                         <tr><td class="label-col">制造单位</td><td class="value-col">CRRC ZJ</td></tr>
                         <tr><td class="label-col">检测方式</td><td class="value-col">UT  MT</td></tr>
                         <tr><td class="label-col">船检控制号</td><td class="value-col">{row['船检控制号']}</td></tr>
-                        <tr><td class="label-col">检验机构</td><td class="value-col">{ccs_display}</td></tr>
+                        <tr><td class="label-col">检验机构</td><td class="value-col">{ccs_html}</td></tr>
                         <tr><td class="label-col">船检时间</td><td class="value-col"><b>{fmt_date}</b></td></tr>
                     </table>
-                    """
-                    st.markdown(html, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
                     
-                    # 4.2 生成并下载图片 (key 确保唯一，文件名以轴号命名)
                     img_data = create_report_image(row, "CCS.png")
                     st.download_button(
-                        label=f"💾 下载图片证书：{row['轴号']}.png",
+                        label=f"💾 下载图片：{row['轴号']}.png",
                         data=img_data,
                         file_name=f"{row['轴号']}.png",
                         mime="image/png",
-                        key=f"dl_btn_{row['轴号']}_{index}"
+                        key=f"btn_{row['轴号']}_{index}"
                     )
                     st.divider()
             else:
