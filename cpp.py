@@ -1,44 +1,71 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
-# 页面配置
-st.set_page_config(page_title="ND曲轴查询系统", layout="centered")
+# 页面基础设置
+st.set_page_config(page_title="ND曲轴CCS查询系统", layout="wide")
 
-# 读取数据
-@st.cache_data
-def load_data():
-    # 这里建议直接使用你的 Excel 文件名
-    try:
-        df = pd.read_excel("ND曲轴.xlsx", sheet_name="CCS")
-        return df
-    except:
-        # 兼容你上传的 CSV 文件名
-        return pd.read_csv("ND曲轴.xlsx - CCS.csv")
+# --- 1. 密码验证逻辑 ---
+def check_password():
+    def password_entered():
+        # 这里对应你在 Streamlit 后台 Secrets 设置的键值
+        if st.session_state["password"] == st.secrets["my_password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]
+        else:
+            st.session_state["password_correct"] = False
 
-df = load_data()
+    if "password_correct" not in st.session_state:
+        st.text_input("请输入访问密码", type="password", on_change=password_entered, key="password")
+        return False
+    elif not st.session_state["password_correct"]:
+        st.text_input("密码错误，请重试", type="password", on_change=password_entered, key="password")
+        st.error("🚫 鉴权失败")
+        return False
+    return True
 
-st.title("🚢 ND曲轴 CCS 证书信息查询")
-st.info("在下方输入轴号，系统将自动检索 CCS 数据库中的相关记录。")
-
-# 查询输入框
-search_id = st.text_input("请输入轴号 (如: 2005L6-366)", placeholder="点击此处输入...")
-
-if search_id:
-    # 逻辑查询
-    res = df[df['轴号'].str.contains(search_id, na=False)]
+# --- 2. 主程序 ---
+if check_password():
+    st.title("🚢 ND曲轴 CCS 证书数据查询系统")
     
-    if not res.empty:
-        # 如果有多条匹配，显示列表
-        for index, row in res.iterrows():
-            with st.container():
-                st.markdown(f"### 🔍 轴号: {row['轴号']}")
-                c1, c2, c3 = st.columns(3)
-                c1.metric("材质", row['材质'])
-                c2.metric("炉号", row['炉号'])
-                c3.metric("验船师", row['验船师'])
+    # 缓存数据读取
+    @st.cache_data
+    def load_data():
+        # 自动识别文件名，建议在仓库里文件名统一为 ND曲轴.xlsx
+        try:
+            return pd.read_excel("ND曲轴.xlsx", sheet_name="CCS")
+        except Exception as e:
+            st.error(f"无法读取文件: {e}")
+            return None
+
+    df = load_data()
+
+    if df is not None:
+        # 查询界面
+        search_id = st.text_input("🔍 输入轴号搜索 (支持部分输入)", placeholder="例如: 2005L6")
+
+        if search_id:
+            # 过滤数据
+            results = df[df['轴号'].astype(str).str.contains(search_id, case=False, na=False)]
+            
+            if not results.empty:
+                st.success(f"共找到 {len(results)} 条相关记录")
                 
-                # 详细信息表格化
-                st.table(row[['证件编号', '图号', '船检控制号', '船检时间', '证书返回时间']].to_frame().T)
-                st.divider()
-    else:
-        st.warning("⚠️ 未找到匹配的轴号，请核对。")
+                # 展示表格
+                st.dataframe(results, use_container_width=True)
+                
+                # 导出功能
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    results.to_excel(writer, index=False)
+                
+                st.download_button(
+                    label="📥 下载查询结果为 Excel",
+                    data=output.getvalue(),
+                    file_name=f"查询结果_{search_id}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.warning("未匹配到任何数据，请检查轴号是否正确。")
+        else:
+            st.info("💡 请在上方输入框输入轴号开始查询。")
