@@ -5,31 +5,35 @@ from PIL import Image, ImageDraw, ImageFont
 import base64
 import os
 
-# --- 1. 页面配置 ---
-st.set_page_config(page_title="ND查询-深蓝醒目版", layout="centered", page_icon="⚓")
+# --- 1. 页面基础配置 ---
+st.set_page_config(page_title="ND曲轴数据查询", layout="centered", page_icon="⚓")
 
-# CSS：将黑色背景更换为深蓝色，并保持超大字号
+# --- 2. 极致手机端优化 CSS (包含隐藏右下角按钮) ---
 st.markdown("""
     <style>
-    .main { background-color: #ffffff; }
+    /* 彻底隐藏手机端右下角管理按钮、浮动小人、页脚和顶部装饰 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none !important;}
+    div[data-testid="stStatusWidget"] {display:none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    .viewerBadge_container__1QSob { display: none !important; }
+    .stAppDeployButton { display: none !important; }
     
-    /* 表格整体：深蓝色粗边框 */
+    /* 网页表格样式：深蓝高对比度，超大字号 */
     .report-table { 
         width: 100%; 
         border-collapse: collapse; 
         margin-top: 10px; 
-        border: 4px solid #004080; /* 改为深蓝色边框 */
+        border: 4px solid #004080; 
         box-shadow: 0px 6px 15px rgba(0,0,0,0.1);
     }
-    
-    /* 单元格：保持大间距 */
     .report-table td { 
         border: 1px solid #004080; 
         padding: 22px 15px; 
         line-height: 1.2;
     }
-    
-    /* 左侧标签：由黑色改为深海蓝 (#004080) */
     .label-col { 
         background-color: #004080 !important; 
         color: #ffffff !important; 
@@ -38,23 +42,16 @@ st.markdown("""
         width: 35%;
         text-align: center;
     }
-    
-    /* 右侧数值：保持超大加粗 */
     .value-col { 
         background-color: #ffffff; 
         font-weight: 900;   
-        font-size: 34px !important; /* 稍微再大一点点 */
+        font-size: 34px !important; 
         color: #002b55; 
         width: 65%;
     }
+    .ccs-logo-img { height: 65px; vertical-align: middle; }
 
-    /* 图标尺寸 */
-    .ccs-logo-img { 
-        height: 65px; 
-        vertical-align: middle; 
-    }
-
-    /* 下载按钮：保持亮橘色，极致醒目 */
+    /* 醒目的大按钮样式 */
     div.stDownloadButton > button {
         width: 100% !important;
         height: 85px !important;
@@ -65,19 +62,15 @@ st.markdown("""
         border-radius: 12px !important;
         border: none !important;
         box-shadow: 0px 5px 15px rgba(255,140,0,0.4) !important;
-        margin-top: 10px;
+        margin-top: 15px;
     }
     
-    /* 搜索框增强 */
-    input {
-        font-size: 28px !important;
-        height: 65px !important;
-        border: 2px solid #004080 !important;
-    }
+    /* 搜索框字号调大 */
+    input { font-size: 28px !important; height: 65px !important; border: 2px solid #004080 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心函数 ---
+# --- 3. 核心功能函数 ---
 
 def get_image_base64(path):
     if os.path.exists(path):
@@ -86,20 +79,20 @@ def get_image_base64(path):
     return None
 
 def get_chinese_font(size):
+    """解决图片中文乱码"""
     paths = ["simhei.ttf", "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf", "C:/Windows/Fonts/simhei.ttf"]
     for p in paths:
         if os.path.exists(p): return ImageFont.truetype(p, size)
     return ImageFont.load_default()
 
 def create_report_image(row, logo_path):
-    """图片生成逻辑：保持与网页版一致的稳重感"""
+    """生成证书图片：图标精准定位在检验机构行"""
     width, height = 800, 1150 
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
     font_b = get_chinese_font(40)
     font_s = get_chinese_font(32)
 
-    # 绘制蓝色粗外框
     draw.rectangle([20, 20, 780, 1130], outline=(0, 64, 128), width=6)
     draw.text((60, 60), "ND CRANKSHAFT DATA REPORT", fill=(0, 64, 128), font=font_b)
 
@@ -135,7 +128,7 @@ def create_report_image(row, logo_path):
     img.save(buf, format="PNG")
     return buf.getvalue()
 
-# --- 3. 密码与逻辑 ---
+# --- 4. 权限与查询逻辑 ---
 if "password_correct" not in st.session_state:
     st.markdown("<h2 style='text-align:center;'>⚓ ND曲轴查询系统登录</h2>", unsafe_allow_html=True)
     st.text_input("请输入访问密码", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == st.secrets.get("my_password", "123456")}), key="password")
@@ -155,7 +148,7 @@ else:
     logo_b64 = get_image_base64("CCS.png")
 
     if df is not None:
-        search_id = st.text_input("🔍 输入轴号搜索 (支持部分匹配):", placeholder="请输入轴号...")
+        search_id = st.text_input("🔍 输入轴号搜索:", placeholder="请输入轴号...")
         if search_id:
             res = df[df['轴号'].astype(str).str.contains(search_id, case=False, na=False)]
             if not res.empty:
@@ -180,12 +173,12 @@ else:
                     
                     img_data = create_report_image(row, "CCS.png")
                     st.download_button(
-                        label=f"📥 下载图片：{row['轴号']}.png",
+                        label=f"📥 下载图片证书：{row['轴号']}.png",
                         data=img_data,
                         file_name=f"{row['轴号']}.png",
                         mime="image/png",
-                        key=f"btn_{row['轴号']}_{index}"
+                        key=f"btn_{row['轴号']}_{index}" # 修复重复 ID 报错
                     )
                     st.markdown("<br><br>", unsafe_allow_html=True)
             else:
-                st.warning("⚠️ 查无数据，请尝试搜索其他轴号")
+                st.warning("⚠️ 查无数据")
