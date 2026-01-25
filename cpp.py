@@ -53,23 +53,24 @@ if check_password():
                         st.markdown(f"### 📋 轴号：{row['轴号']}")
                         
                         # 第一行
-                        r1_c1, r1_c2, r1_c3 = st.columns(3)
+                        r1_c1 = st.columns(1)
                         r1_c1.markdown(f"**名称：** {row.get('名称', 'N/A')}")
-                        r1_c2.markdown(f"**证件编号：** {row.get('证件编号', 'N/A')}")
-                        r1_c3.markdown(f"**材质：** {row.get('材质', 'N/A')}")
-
                         # 第二行
-                        r2_c1, r2_c2, r2_c3 = st.columns(3)
-                        r2_c1.markdown(f"**图号：** {row.get('图号', 'N/A')}")
-                        r2_c2.markdown(f"**炉号：** {row.get('炉号', 'N/A')}")
-                        r2_c3.markdown(f"**船检控制号：** {row.get('船检控制号', 'N/A')}")
-
+                        r2_c1 = st.columns(1)
+                        r2_c1.markdown(f"**轴号：** {row.get('轴号', 'N/A')}")
                         # 第三行
-                        r3_c1, r3_c2, r3_c3 = st.columns(3)
-                        r3_c1.markdown(f"**验船师：** {row.get('验船师', 'N/A')}")
-                        r3_c2.markdown(f"**船检时间：** {row.get('船检时间', 'N/A')}")
-                        r3_c3.markdown(f"**证书返回时间：** {row.get('证书返回时间', 'N/A')}")
-                        
+                        r3_c1 = st.columns(1)
+                         r3_c1.markdown(f"**材质：** {row.get('材质', 'N/A')}")
+                        # 第四行
+                        r4_c1 = st.columns(1)
+                        r4_c1.markdown(f"**炉号：** {row.get('炉号', 'N/A')}")
+                        # 第五行
+                        r5_c1 = st.columns(1) 
+                        r5_c1.markdown(f"**船检控制号：** {row.get('船检控制号', 'N/A')}")
+                        # 第六行
+                        r6_c1 = st.columns(1) 
+                        r6_c1.markdown(f"**船检时间：** {row.get('船检时间', 'N/A')}")
+                     
                         st.divider() # 分割线，区分多条结果
                 
                 # 导出按钮
