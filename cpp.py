@@ -6,33 +6,32 @@ import base64
 import os
 
 # --- 1. 页面配置 ---
-st.set_page_config(page_title="ND查询-超大字号版", layout="centered", page_icon="⚓")
+st.set_page_config(page_title="ND查询-深蓝醒目版", layout="centered", page_icon="⚓")
 
-# CSS：极致字号优化
+# CSS：将黑色背景更换为深蓝色，并保持超大字号
 st.markdown("""
     <style>
-    /* 全局背景和间距 */
-    .main { background-color: #f9f9f9; }
+    .main { background-color: #ffffff; }
     
-    /* 表格整体：加粗边框 */
+    /* 表格整体：深蓝色粗边框 */
     .report-table { 
         width: 100%; 
         border-collapse: collapse; 
         margin-top: 10px; 
-        border: 4px solid #000; 
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+        border: 4px solid #004080; /* 改为深蓝色边框 */
+        box-shadow: 0px 6px 15px rgba(0,0,0,0.1);
     }
     
-    /* 单元格：超大字号与超大间距 */
+    /* 单元格：保持大间距 */
     .report-table td { 
-        border: 1px solid #000; 
-        padding: 20px 15px; /* 极大的内边距 */
+        border: 1px solid #004080; 
+        padding: 22px 15px; 
         line-height: 1.2;
     }
     
-    /* 左侧标签：高对比度黑底白字 */
+    /* 左侧标签：由黑色改为深海蓝 (#004080) */
     .label-col { 
-        background-color: #333333 !important; 
+        background-color: #004080 !important; 
         color: #ffffff !important; 
         font-weight: bold; 
         font-size: 24px !important;
@@ -40,38 +39,40 @@ st.markdown("""
         text-align: center;
     }
     
-    /* 右侧数值：超大加粗深蓝色 */
+    /* 右侧数值：保持超大加粗 */
     .value-col { 
         background-color: #ffffff; 
         font-weight: 900;   
-        font-size: 32px !important; /* 核心字号推到32px */
-        color: #003366;    /* 深蓝色更醒目 */
+        font-size: 34px !important; /* 稍微再大一点点 */
+        color: #002b55; 
         width: 65%;
     }
 
-    /* CCS 图标调大 */
+    /* 图标尺寸 */
     .ccs-logo-img { 
-        height: 60px; 
+        height: 65px; 
         vertical-align: middle; 
     }
 
-    /* 下载按钮：全屏宽度 + 亮橘色 + 巨型字 */
+    /* 下载按钮：保持亮橘色，极致醒目 */
     div.stDownloadButton > button {
         width: 100% !important;
-        height: 80px !important;
+        height: 85px !important;
         font-size: 28px !important;
         font-weight: bold !important;
-        background-color: #FF8C00 !important; /* 亮橘色极其醒目 */
+        background-color: #FF8C00 !important;
         color: white !important;
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         border: none !important;
         box-shadow: 0px 5px 15px rgba(255,140,0,0.4) !important;
+        margin-top: 10px;
     }
     
-    /* 搜索框字号调大 */
+    /* 搜索框增强 */
     input {
-        font-size: 26px !important;
-        height: 60px !important;
+        font-size: 28px !important;
+        height: 65px !important;
+        border: 2px solid #004080 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -91,15 +92,16 @@ def get_chinese_font(size):
     return ImageFont.load_default()
 
 def create_report_image(row, logo_path):
-    """生成的图片也同步加粗加大"""
-    width, height = 800, 1100 
+    """图片生成逻辑：保持与网页版一致的稳重感"""
+    width, height = 800, 1150 
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    font_b = get_chinese_font(40) # 图片标题调大
-    font_s = get_chinese_font(32) # 图片内容调大
+    font_b = get_chinese_font(40)
+    font_s = get_chinese_font(32)
 
-    draw.rectangle([20, 20, 780, 1080], outline=(0, 0, 0), width=5)
-    draw.text((50, 50), "ND CRANKSHAFT DATA REPORT", fill=(0, 0, 0), font=font_b)
+    # 绘制蓝色粗外框
+    draw.rectangle([20, 20, 780, 1130], outline=(0, 64, 128), width=6)
+    draw.text((60, 60), "ND CRANKSHAFT DATA REPORT", fill=(0, 64, 128), font=font_b)
 
     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
     items = [
@@ -114,20 +116,20 @@ def create_report_image(row, logo_path):
         ("船检时间", fmt_date)
     ]
 
-    y = 150
+    y = 160
     for label, value in items:
-        draw.line([50, y + 65, 750, y + 65], fill=(0, 0, 0), width=2)
-        draw.text((60, y), f"{label}:", fill=(0, 0, 0), font=font_s)
+        draw.line([60, y + 70, 740, y + 70], fill=(200, 200, 200), width=2)
+        draw.text((80, y), f"{label}:", fill=(100, 100, 100), font=font_s)
         if value == "LOGO_MARK":
             if os.path.exists(logo_path):
                 logo = Image.open(logo_path).convert("RGBA")
-                logo.thumbnail((180, 70))
-                img.paste(logo, (300, y - 5), logo)
+                logo.thumbnail((200, 80))
+                img.paste(logo, (320, y - 5), logo)
             else:
-                draw.text((300, y), "CCS", fill=(0, 0, 0), font=font_s)
+                draw.text((320, y), "CCS", fill=(0, 0, 0), font=font_s)
         else:
-            draw.text((300, y), value, fill=(0, 0, 0), font=font_s)
-        y += 100 
+            draw.text((320, y), value, fill=(0, 0, 0), font=font_s)
+        y += 105 
 
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -135,16 +137,17 @@ def create_report_image(row, logo_path):
 
 # --- 3. 密码与逻辑 ---
 if "password_correct" not in st.session_state:
-    st.markdown("<h1 style='text-align:center;'>🔒 授权登录</h1>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>⚓ ND曲轴查询系统登录</h2>", unsafe_allow_html=True)
     st.text_input("请输入访问密码", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == st.secrets.get("my_password", "123456")}), key="password")
 else:
-    st.markdown("<h1 style='color:#003366;'>🚢 ND曲轴证书查询</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#004080; text-align:center;'>🚢 ND曲轴证书查询</h1>", unsafe_allow_html=True)
     
     @st.cache_data
     def load_data():
         try:
             df = pd.read_excel("ND曲轴.xlsx", sheet_name="CCS")
-            df['船检时间'] = pd.to_datetime(df['船检时间'], errors='coerce')
+            if '船检时间' in df.columns:
+                df['船检时间'] = pd.to_datetime(df['船检时间'], errors='coerce')
             return df
         except: return None
 
@@ -152,11 +155,11 @@ else:
     logo_b64 = get_image_base64("CCS.png")
 
     if df is not None:
-        search_id = st.text_input("🔍 点击输入轴号搜索:", placeholder="例如: ND2-11")
+        search_id = st.text_input("🔍 输入轴号搜索 (支持部分匹配):", placeholder="请输入轴号...")
         if search_id:
             res = df[df['轴号'].astype(str).str.contains(search_id, case=False, na=False)]
             if not res.empty:
-                st.write(f"找到 {len(res)} 条记录")
+                st.write(f"✅ 匹配到 {len(res)} 条记录")
                 for index, row in res.iterrows():
                     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
                     ccs_html = f'<img src="data:image/png;base64,{logo_b64}" class="ccs-logo-img">' if logo_b64 else "CCS"
@@ -177,7 +180,7 @@ else:
                     
                     img_data = create_report_image(row, "CCS.png")
                     st.download_button(
-                        label=f"📥 点击下载图片：{row['轴号']}.png",
+                        label=f"📥 下载图片：{row['轴号']}.png",
                         data=img_data,
                         file_name=f"{row['轴号']}.png",
                         mime="image/png",
@@ -185,4 +188,4 @@ else:
                     )
                     st.markdown("<br><br>", unsafe_allow_html=True)
             else:
-                st.warning("⚠️ 查无记录，请检查输入")
+                st.warning("⚠️ 查无数据，请尝试搜索其他轴号")
