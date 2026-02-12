@@ -81,8 +81,8 @@ def create_report_image(row, logo_path):
 
     items = [
         ("名  称", str(row.get('名称', 'N/A'))),
-        ("型号", str(row.get('图号', 'N/A'))),
-        ("图  号", str(row.get('轴号', 'N/A'))),
+        ("型  号",  "6NL30"),
+        ("图  号", str(row.get('图号', 'N/A'))),
         ("轴  号", str(row.get('轴号', 'N/A'))),
         ("材  质", str(row.get('材质', 'N/A'))),
         ("炉  号", str(row.get('炉号', 'N/A'))),
@@ -143,4 +143,5 @@ def load_data_smart():
 if "password_correct" not in st.session_state:
     st.markdown("<h2 style='text-align:center;'>⚓ 内部系统登录</h2>", unsafe_allow_html=True)
     pwd = st.text_input("请输入访问密码", type="password")
+
     if st.
