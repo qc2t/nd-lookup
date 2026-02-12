@@ -108,13 +108,15 @@ def create_report_image(row, logo_path):
     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
     items = [
         ("名  称", str(row.get('名称', 'N/A'))),
+        ("型号", str(row.get('图号', 'N/A'))),
+        ("图  号", str(row.get('轴号', 'N/A'))),
         ("轴  号", str(row.get('轴号', 'N/A'))),
         ("材  质", str(row.get('材质', 'N/A'))),
         ("炉  号", str(row.get('炉号', 'N/A'))),
         ("制造单位", "CRRC ZJ"),
         ("检测方式", "UT  MT"),
         ("船检控制号", str(row.get('船检控制号', 'N/A'))),
-        ("检验机构", "LOGO_MARK"), 
+        ("检验机构", "CCS"), 
         ("船检时间", fmt_date)
     ]
 
@@ -197,4 +199,5 @@ else:
                         )
                         st.markdown("<br><br>", unsafe_allow_html=True)
                 else:
+
                     st.warning("⚠️ 查无数据")
