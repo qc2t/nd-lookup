@@ -8,7 +8,7 @@ import os
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="ND曲轴数据查询", layout="centered", page_icon="⚓")
 
-# CSS：保持超大醒目字号与深蓝配色
+# CSS：强制刷新样式，确保手机端超大字号和深蓝背景
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -18,7 +18,7 @@ st.markdown("""
     div[data-testid="stStatusWidget"] {display:none !important;}
     
     .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 4px solid #004080; }
-    .report-table td { border: 1px solid #004080; padding: 20px 15px; line-height: 1.2; }
+    .report-table td { border: 1px solid #004080; padding: 22px 15px; line-height: 1.2; }
     .label-col { background-color: #004080 !important; color: #ffffff !important; font-weight: bold; font-size: 24px !important; width: 35%; text-align: center; }
     .value-col { background-color: #ffffff; font-weight: 900; font-size: 34px !important; color: #002b55; width: 65%; }
     .ccs-logo-img { height: 65px; vertical-align: middle; }
@@ -34,13 +34,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 功能函数 ---
-
-def get_image_base64(path):
-    if os.path.exists(path):
-        with open(path, "rb") as f: return base64.b64encode(f.read()).decode()
-    return None
-
+# --- 2. 核心绘图函数 (确保图片也加行) ---
 def get_chinese_font(size):
     paths = ["simhei.ttf", "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf", "C:/Windows/Fonts/simhei.ttf"]
     for p in paths:
@@ -48,8 +42,7 @@ def get_chinese_font(size):
     return ImageFont.load_default()
 
 def create_report_image(row, logo_path):
-    """图片生成：增加型号与图号行"""
-    width, height = 800, 1300 # 再次增加高度以容纳新行
+    width, height = 800, 1300  # 增加高度
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
     font_b = get_chinese_font(40)
@@ -60,11 +53,11 @@ def create_report_image(row, logo_path):
 
     fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
     
-    # 构建包含新增行的数据项
+    # 这里的 items 决定了生成图片的内容顺序
     items = [
         ("名  称", str(row.get('名称', 'N/A'))),
-        ("机  型", "6NL30"),  # 第一行固定 6NL30
-        ("图  号", str(row.get('图号', 'N/A'))), # 第二行为对应图号
+        ("机  型", "6NL30"),  # 固定显示
+        ("图  号", str(row.get('图号', 'N/A'))), # 从 Excel 读取
         ("轴  号", str(row.get('轴号', 'N/A'))),
         ("材  质", str(row.get('材质', 'N/A'))),
         ("炉  号", str(row.get('炉号', 'N/A'))),
@@ -108,10 +101,18 @@ else:
         except: return None
 
     df = load_data()
-    logo_b64 = get_image_base64("CCS.png")
+    
+    # 图标加载
+    if os.path.exists("CCS.png"):
+        with open("CCS.png", "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+    else:
+        logo_b64 = None
 
     if df is not None:
         st.markdown("<h1 style='color:#004080; text-align:center;'>🚢 ND曲轴证书查询</h1>", unsafe_allow_html=True)
+        
+        # 输入框和查询按钮
         col1, col2 = st.columns([0.75, 0.25])
         with col1: search_id = st.text_input("", placeholder="输入轴号...", label_visibility="collapsed", key="search_input")
         with col2: search_clicked = st.button("查询", use_container_width=True)
@@ -124,7 +125,7 @@ else:
                         fmt_date = row['船检时间'].strftime('%d-%m-%Y') if pd.notnull(row['船检时间']) else 'N/A'
                         ccs_html = f'<img src="data:image/png;base64,{logo_b64}" class="ccs-logo-img">' if logo_b64 else "CCS"
                         
-                        # 网页端显示：增加机型和图号两行
+                        # 网页显示代码
                         st.markdown(f"""
                         <table class="report-table">
                             <tr><td class="label-col">名 称</td><td class="value-col">{row['名称']}</td></tr>
@@ -149,6 +150,4 @@ else:
                             mime="image/png",
                             key=f"btn_{row['轴号']}_{index}"
                         )
-                        st.markdown("<br>", unsafe_allow_html=True)
-                else:
-                    st.warning("⚠️ 查无数据")
+                        st.divider()
