@@ -1,4 +1,4 @@
-import streamlit as st
+ mport streamlit as st
 import pandas as pd
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
@@ -151,7 +151,7 @@ if "password_correct" not in st.session_state:
         
         if login_btn:
             # 统一转为纯文本并剔除前后空格，避免因类型或格式匹配失败
-            target_pwd = str(st.secrets.get("my_password", "123456")).strip()
+            target_pwd = str(st.secrets.get("my_password", "123qqq.")).strip()
             if str(pwd_input).strip() == target_pwd:
                 st.session_state["password_correct"] = True
                 st.rerun()
