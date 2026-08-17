@@ -1,4 +1,4 @@
- mport streamlit as st
+ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
